@@ -1,4 +1,68 @@
-1. K8s pod having issues hitting AWS metadata service `can't connect to remote host (169.254.169.254): Connection refused`
+Testing kube2iam with a test pod.
+
+Run below pod:
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+ labels:
+   run: test
+ name: test
+ namespace: monitoring
+ annotations:
+    iam.amazonaws.com/role: arn:aws:iam::<account-id>:role/<role-name>
+spec:
+  tolerations:
+    - operator: Exists
+  nodeSelector:
+    kubernetes.io/hostname: <node-ip>.internal
+  containers:
+   - image: ewoutp/docker-nginx-curl
+     name: test
+```
+
+Now bash into the pod,
+
+```bash
+kubectl exec -it test -- /bin/bash
+```
+
+Run the command below,
+
+```bash
+curl http://169.254.169.254/latest/meta-data/iam/security-credentials/
+```
+
+The output should be,
+
+```bash
+<role-name>
+```
+
+Now try to generate temporary credentials,
+
+```bash
+curl http://169.254.169.254/latest/meta-data/iam/security-credentials/arn:aws:iam::<account-id>:role/<role-name>
+```
+
+The output should be,
+
+```bash
+{   "AccessKeyId":"<id>",
+    "Code":"Success",
+    "Expiration":"2020-05-29T03:33:50Z",
+    "LastUpdated":"2020-05-29T03:03:50Z",
+    "SecretAccessKey":"<secKey>",
+    "Token":"<token>",
+    "Type":"AWS-HMAC"
+}
+``` 
+
+
+---
+
+K8s pod having issues hitting AWS metadata service `can't connect to remote host (169.254.169.254): Connection refused`
 
 curl http://169.254.169.254/latest/meta-data/iam/security-credentials/
 
@@ -35,4 +99,6 @@ As this is done on each node, EC2 metadata requests will no longer go to kube2ia
 Reference: 
 
 1. https://www.bluematador.com/blog/iam-access-in-kubernetes-installing-kube2iam-in-production
+
+---
 
